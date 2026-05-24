@@ -1,0 +1,7 @@
+{
+  "name": "agriculture-root",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"cd backend && python manage.py runserver\" \"cd frontend && npm run dev\""
+  }
+}
