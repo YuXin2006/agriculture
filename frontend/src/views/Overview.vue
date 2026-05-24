@@ -32,7 +32,7 @@
         </div>
       </div>
     </section>
-
+      <!-- 传感器数据部分 -->
     <section class="sensor-section">
       <div class="sensor-grid">
         <article
@@ -69,7 +69,7 @@
           </footer>
         </article>
       </div>
-
+      
       <aside class="alarm-panel dash-card">
         <h2>最新告警</h2>
         <ul v-if="alarms.length" class="alarm-list">

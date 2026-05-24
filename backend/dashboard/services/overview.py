@@ -343,17 +343,20 @@ def _serialize_devices(page, page_size):
 
 
 def build_overview_payload(page=1, page_size=8, region=None):
+    # 1. 获取最新传感器数据（从MQTT缓存）
     env_latest = _latest_env()
     soil_latest = _latest_soil()
     sensor_latest = _latest_sensor()
+    # 2. 获取分析数据（图表数据等）
     analysis = build_analysis_payload(region=region)
-
+    # 3. 提取关键指标用于总览展示
     metrics = {
         "soil_moisture": None,
         "temperature": None,
         "co2": None,
         "light": None,
     }
+    # ... 从最新记录中填充 metrics
     if soil_latest:
         metrics["soil_moisture"] = soil_latest.soil_moisture
     if env_latest:
@@ -365,9 +368,10 @@ def build_overview_payload(page=1, page_size=8, region=None):
         metrics["temperature"] = sensor_latest.temperature
         metrics["co2"] = sensor_latest.co2
         metrics["light"] = sensor_latest.light
+    # 4. 获取分页的设备列表
 
     device_results, device_pagination, device_summary = _serialize_devices(page, page_size)
-
+    # 5. 组装最终返回数据
     return {
         "meta": _build_meta(),
         "metrics": metrics,
