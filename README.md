@@ -39,7 +39,7 @@ npm run dev
 - 帮助中心：空白占位页
 
 
-### 后端接口声明
+### 部分后端接口声明
 
 1. overview/：获取数据总览信息 返回格式如下
 
@@ -104,5 +104,66 @@ npm run dev
 
 3. sensors/<int:pk>/ 传感器数据的 详情查询 和 更新 操作。
 
+### 拟定的mqtt数据主题
 
-4. 
+1.  环境数据主题：agri/env (对应EnvMonitorRecord模型)
+{
+    "node_id": "sensor_001",
+    "temperature": 25.8,
+    "humidity": 65.2,
+    "co2": 420,
+    "light": 8500,
+    "pressure": 101.3,
+    "air_quality": 45,
+    "recorded_at": "2024-01-15 14:30:00"
+}
+
+
+2.  土壤湿度主题：agri/soil (对应SoilMoistureRecord模型)
+{
+    "node_id": "sensor_001",
+    "soil_moisture": 58.5,
+    "soil_ph": 6.8,
+    "soil_temperature": 22.3,
+    "recorded_at": "2024-01-15 14:30:00"
+}
+
+3.  传感器综合数据主题：agri/sensor (对应SensorData模型)
+{
+    "node_id": "sensor_001",
+    "temperature": 25.5,
+    "humidity": 65.2,
+    "co2": 420,
+    "light": 8500,
+    "soil_moisture": 58.0,
+    "soil_ph": 6.8,
+    "created_at": "2024-01-15T14:30:00Z"
+}
+
+4. 设备信息主题：agri/devices (对应DeviceNode模型)
+{
+    "node_id": "sensor_001",
+    "name": "温室A区-传感器01",
+    "device_type": "多合一传感器",
+    "region": "北区",
+    "install_location": "温室A区-第3排",
+    "status": "online",
+    "signal_strength": 4,
+    "battery_level": 85,
+    "latitude": 30.5928,
+    "longitude": 104.0668,
+    "updated_at": "2024-01-15 14:30:00"
+}
+
+5. (拟定) 告警数据主题：agri/alarm (对应AlarmRecord模型)
+{
+    "node_id": "sensor_001",
+    "level": "warn",
+    "title": "土壤湿度过低",
+    "message": "当前土壤湿度为 35%，低于阈值 45%",
+    "detail": "建议立即启动灌溉系统",
+    "metric_value": 35.0,
+    "threshold": 45.0,
+    "status": "active",
+    "created_at": "2024-01-15 14:30:00"
+}
