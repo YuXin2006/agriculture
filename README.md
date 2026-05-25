@@ -37,3 +37,72 @@ npm run dev
 - 告警中心：空白占位页
 - 系统设置：空白占位页
 - 帮助中心：空白占位页
+
+
+### 后端接口声明
+
+1. overview/：获取数据总览信息 返回格式如下
+
+{
+    "meta": {
+        "location": "示范种植基地 · 北区",
+        "last_updated": "2024-01-15 14:30:00",
+        "weather": {"text": "晴", "temperature": 26.5, "icon": "☀"},
+        "sampling_interval": "5 分钟/次"
+    },
+    "metrics": {
+        "soil_moisture": 58.2,
+        "temperature": 25.8,
+        "co2": 420,
+        "light": 8500
+    },
+    "summary_stats": [
+        {"icon": "📡", "label": "设备总数", "value": 25},
+        {"icon": "✅", "label": "在线设备", "value": 23},
+        {"icon": "⚠", "label": "离线设备", "value": 2},
+        {"icon": "⏱", "label": "采集频率", "value": "5 分钟/次"}
+    ],
+    "summary": {
+        "total_devices": 25,
+        "online_devices": 23,
+        "offline_devices": 2,
+        "alarm_count": 3,
+        "sampling_interval": "5 分钟/次"
+    },
+    "sensor_cards": [...],  # 8个传感器卡片数据
+    "alarms": [...],         # 最近5条告警
+    "chart_24h": {           # 24小时趋势图
+        "labels": ["00:00", "01:00", ...],
+        "temperature": [22.1, 21.8, ...],
+        "humidity": [65, 66, ...],
+        "soil_moisture": [58, 57, ...]
+    },
+    "air_quality_distribution": {...},
+    "kpi_stats": [...],      # KPI统计
+    "devices": {             # 分页设备列表
+        "results": [...],
+        "pagination": {...},
+        "summary": {...}
+    },
+    "heatmap": {...},        # 土壤湿度热力图
+    "gps_points": [...]      # GPS点位列表
+}
+
+2. sensors/ 传感器数据的 列表查询 和 创建 操作。
+
+
+{
+    "results": [...],  # 传感器数据列表
+    "pagination": {
+        "page": 1,
+        "page_size": 10,
+        "total": 100,
+        "total_pages": 10
+    }
+}
+
+
+3. sensors/<int:pk>/ 传感器数据的 详情查询 和 更新 操作。
+
+
+4. 

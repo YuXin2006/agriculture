@@ -1,6 +1,8 @@
+# [已注释重构] AI分析视图
 from .ai import AIAnalysisAPIView
 from .alarm import AlarmDetailAPIView, AlarmListCreateAPIView
 from .base import ModelCRUDDetailAPIView, ModelCRUDListCreateAPIView
+# [已注释重构] 数据分析视图
 from .data_analysis import DataAnalysisDetailAPIView, DataAnalysisListCreateAPIView
 from .devices import DeviceGPSAPIView, DeviceNodeDetailAPIView, DeviceNodeListCreateAPIView
 from .env_monitor import EnvMonitorDetailAPIView, EnvMonitorListCreateAPIView
