@@ -5,6 +5,7 @@ import DeviceManage from "../views/DeviceManage.vue";
 import AlarmCenter from "../views/AlarmCenter.vue";
 import SystemSettings from "../views/SystemSettings.vue";
 import HelpCenter from "../views/HelpCenter.vue";
+import ChatBot from "../views/ChatBot.vue";
 
 const routes = [
   {
@@ -44,6 +45,12 @@ const routes = [
         name: "help-center",
         component: HelpCenter,
         meta: { title: "帮助中心" },
+      },
+      {
+        path: "chat",
+        name: "chat",
+        component: ChatBot,
+        meta: { title: "问问AI" },
       },
     ],
   },

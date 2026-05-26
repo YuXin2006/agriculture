@@ -39,3 +39,18 @@ export const deleteDevice = (id) => {
 export const getDeviceGps = (id) => {
   return http.get(`/api/devices/${id}/gps/`);
 };
+
+// 发送 AI 聊天消息
+export const sendChatMessage = (data) => {
+  return http.post("/api/chat/", data);
+};
+
+// 获取聊天历史
+export const getChatHistory = (params = {}) => {
+  return http.get("/api/chat/history/", params);
+};
+
+// 清空当前会话
+export const clearChatSession = (data = {}) => {
+  return http.post("/api/chat/clear/", data);
+};

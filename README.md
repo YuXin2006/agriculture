@@ -167,3 +167,16 @@ npm run dev
     "status": "active",
     "created_at": "2024-01-15 14:30:00"
 }
+
+
+-ai功能(chatbot)
+前端接口
+sendChatMessage(data)	POST /api/chat/	发送消息
+getChatHistory(params)	GET /api/chat/history/	获取历史（预留）
+clearChatSession(data)	POST /api/chat/clear/	清空会话（预留）
+
+发送消息的请求体约定：
+{ message: "用户问题", session_id: "可选，多轮对话用" }
+
+期望响应字段（后端实现时对齐即可）：
+{ reply: "AI 回复", session_id: "会话 ID" }

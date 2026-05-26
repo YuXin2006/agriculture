@@ -9,6 +9,7 @@ const menuItems = [
   { label: "设备管理", path: "/device-manage", icon: "device" },
   { label: "告警记录", path: "/alarm-center", icon: "alarm" },
   { label: "系统设置", path: "/system-settings", icon: "settings" },
+  { label: "问问AI", path: "/chat", icon: "ai" },
 ];
 
 const currentTitle = computed(() => route.meta.title || "智慧农业作物监测系统");
