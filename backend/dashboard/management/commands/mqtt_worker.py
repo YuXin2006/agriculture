@@ -25,7 +25,6 @@ class Command(BaseCommand):
             "agri/sensor",
             "agri/alarm",
             "agri/device",
-            "agri/devices",
         ]
 
         def on_connect(client, userdata, flags, rc):
@@ -104,7 +103,7 @@ class Command(BaseCommand):
                     )
                     self.stdout.write(self.style.SUCCESS(f"告警数据已写入数据库"))
 
-                elif topic.endswith("/device") or topic.endswith("/devices"):
+                elif topic.endswith("/device"):
                     # 设备信息
                     if isinstance(data, list):
                         devices = data

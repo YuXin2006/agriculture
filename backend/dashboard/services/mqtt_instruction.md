@@ -22,6 +22,15 @@ MQTT_ENABLED	是否启用MQTT	True
 
 2. 全局缓存字典 (_cache)
 3. 时间处理工具函数
+
+_make_timezone_aware(dt)
+将四种输入格式(datetime timestamp str )转换成aware datetime对象	   
+
+_extract_recorded_at(data)
+从数据字典中提取时间戳字段
+
+_append_history(queue, data)
+将数据字典添加到历史队列中
 4. 消息处理函数
 
 函数	                                     功能
