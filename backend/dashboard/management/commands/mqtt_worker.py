@@ -136,7 +136,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"入库异常: {str(e)}"))
 
         # 配置 MQTT 客户端
-        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+        client = mqtt.Client()
         client.on_connect = on_connect
         client.on_message = on_message
 
@@ -144,6 +144,13 @@ class Command(BaseCommand):
         from django.conf import settings
         broker_address = getattr(settings, "MQTT_BROKER_HOST", "broker.emqx.io")
         port = getattr(settings, "MQTT_BROKER_PORT", 1883)
+        mqtt_username = getattr(settings, "MQTT_USERNAME", None)
+        mqtt_password = getattr(settings, "MQTT_PASSWORD", None)
+        
+        # 设置认证信息（如果配置了的话）
+        if mqtt_username and mqtt_password:
+            client.username_pw_set(mqtt_username, mqtt_password)
+            self.stdout.write(f"已设置 MQTT 认证: {mqtt_username}")
         
         self.stdout.write(f"正在连接 MQTT 服务器: {broker_address}:{port}")
         

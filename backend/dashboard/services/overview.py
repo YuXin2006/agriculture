@@ -62,15 +62,39 @@ def _trend_points(queryset, field, points=7):
 
 
 def _latest_env():
-    return get_latest_env()
+    """获取最新环境数据，优先从MQTT缓存，缓存为空则从数据库读取"""
+    cached = get_latest_env()
+    if cached:
+        return cached
+    # 缓存为空，从数据库读取最新记录
+    try:
+        return EnvMonitorRecord.objects.order_by("-recorded_at").first()
+    except Exception:
+        return None
 
 
 def _latest_soil():
-    return get_latest_soil()
+    """获取最新土壤数据，优先从MQTT缓存，缓存为空则从数据库读取"""
+    cached = get_latest_soil()
+    if cached:
+        return cached
+    # 缓存为空，从数据库读取最新记录
+    try:
+        return SoilMonitorRecord.objects.order_by("-recorded_at").first()
+    except Exception:
+        return None
 
 
 def _latest_sensor():
-    return get_latest_sensor()
+    """获取最新传感器数据，优先从MQTT缓存，缓存为空则从数据库读取"""
+    cached = get_latest_sensor()
+    if cached:
+        return cached
+    # 缓存为空，从数据库读取最新记录
+    try:
+        return SensorData.objects.order_by("-created_at").first()
+    except Exception:
+        return None
 
 
 def _build_sensor_cards(env_latest, soil_latest, sensor_latest):

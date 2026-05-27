@@ -106,6 +106,8 @@ MQTT_TOPICS = [
     "agri/alarm",
     "agri/device",
 ]
+MQTT_USERNAME = os.getenv("MQTT_USERNAME", "")
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "")
 
 # LangChain / 大模型配置（兼容 OpenAI 及国内 OpenAI 兼容接口）
 LLM_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY", "")
