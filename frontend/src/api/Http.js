@@ -14,11 +14,11 @@ class Http {
                 return config
             })
         }
-    post(path,data){
+    post(path, data, options = {}) {
         //axios底层也是用的promise对象 相应的状态码不是200时就会调用reject，await会抛出异常
         return new Promise(async (resolve, reject) => {
             try{
-                let result=await this.instance.post(path,data)
+                let result = await this.instance.post(path, data, options)
                 resolve(result.data)
             }catch(err){
                 let detail=err?.response?.data?.detail || err?.message || '请求失败'

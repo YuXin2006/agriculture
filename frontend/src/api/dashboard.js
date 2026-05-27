@@ -40,9 +40,9 @@ export const getDeviceGps = (id) => {
   return http.get(`/api/devices/${id}/gps/`);
 };
 
-// 发送 AI 聊天消息
+// 发送 AI 聊天消息（大模型首包较慢，单独延长超时）
 export const sendChatMessage = (data) => {
-  return http.post("/api/chat/", data);
+  return http.post("/api/chat/", data, { timeout: 120000 });
 };
 
 // 获取聊天历史

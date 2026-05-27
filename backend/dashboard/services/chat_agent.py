@@ -43,6 +43,7 @@ def _get_llm():
         "model": settings.LLM_MODEL,
         "temperature": settings.LLM_TEMPERATURE,
         "api_key": settings.LLM_API_KEY,
+        "timeout": settings.LLM_REQUEST_TIMEOUT,
     }
     if settings.LLM_API_BASE:
         kwargs["base_url"] = settings.LLM_API_BASE
