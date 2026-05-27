@@ -209,15 +209,48 @@ def start_mqtt():
 
 
 def get_latest_env():
-    return _cache["env"]
+    # 确保模型已导入
+    if EnvMonitorRecord is None:
+        _lazy_import_models()
+    
+    cached = _cache["env"]
+    if cached:
+        return cached
+    # 缓存为空，从数据库读取最新记录
+    try:
+        return EnvMonitorRecord.objects.order_by("-recorded_at").first()
+    except Exception:
+        return None
 
 
 def get_latest_soil():
-    return _cache["soil"]
+    # 确保模型已导入
+    if SoilMonitorRecord is None:
+        _lazy_import_models()
+    
+    cached = _cache["soil"]
+    if cached:
+        return cached
+    # 缓存为空，从数据库读取最新记录
+    try:
+        return SoilMonitorRecord.objects.order_by("-recorded_at").first()
+    except Exception:
+        return None
 
 
 def get_latest_sensor():
-    return _cache["sensor"]
+    # 确保模型已导入
+    if SensorData is None:
+        _lazy_import_models()
+    
+    cached = _cache["sensor"]
+    if cached:
+        return cached
+    # 缓存为空，从数据库读取最新记录
+    try:
+        return SensorData.objects.order_by("-created_at").first()
+    except Exception:
+        return None
 
 
 def get_device_list():
