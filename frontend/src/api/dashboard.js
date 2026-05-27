@@ -40,9 +40,76 @@ export const getDeviceGps = (id) => {
   return http.get(`/api/devices/${id}/gps/`);
 };
 
-// 发送 AI 聊天消息（大模型首包较慢，单独延长超时）
+// 发送 AI 聊天消息（非流式，备用）
 export const sendChatMessage = (data) => {
   return http.post("/api/chat/", data, { timeout: 120000 });
+};
+
+// 流式发送 AI 聊天消息（SSE）
+export const streamChatMessage = (data, callbacks = {}) => {
+  const baseURL = import.meta.env.VITE_BASE_URL || "http://127.0.0.1:8000";
+  const { onSession, onToken, onDone, onError } = callbacks;
+
+  return new Promise((resolve, reject) => {
+    fetch(`${baseURL}/api/chat/stream/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({}));
+          const detail = errBody?.detail || `请求失败 (${response.status})`;
+          onError?.(detail);
+          reject(detail);
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const pump = () =>
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              resolve();
+              return;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              try {
+                const event = JSON.parse(line.slice(6));
+                if (event.type === "session") {
+                  onSession?.(event.session_id);
+                } else if (event.type === "token") {
+                  onToken?.(event.content);
+                } else if (event.type === "done") {
+                  onDone?.(event.reply);
+                } else if (event.type === "error") {
+                  onError?.(event.detail);
+                  reject(event.detail);
+                  return;
+                }
+              } catch {
+                /* 忽略解析失败的行 */
+              }
+            }
+            return pump();
+          });
+
+        return pump();
+      })
+      .catch((err) => {
+        const detail = err?.message || "网络请求失败";
+        onError?.(detail);
+        reject(detail);
+      });
+  });
 };
 
 // 获取聊天历史

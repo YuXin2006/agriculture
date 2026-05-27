@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, onMounted, ref } from "vue";
-import { clearChatSession, getChatHistory, sendChatMessage } from "../api/dashboard";
+import { clearChatSession, getChatHistory, streamChatMessage } from "../api/dashboard";
+import { renderMarkdown } from "../utils/markdown";
 
 const SESSION_KEY = "agri_chat_session_id";
 const WELCOME_MESSAGE =
@@ -40,6 +41,7 @@ function setWelcomeMessage() {
       role: "assistant",
       content: WELCOME_MESSAGE,
       time: formatTime(new Date()),
+      streaming: false,
     },
   ];
 }
@@ -50,6 +52,7 @@ function mapHistoryItem(item, index) {
     role: item.role,
     content: item.content,
     time: parseTime(item.created_at),
+    streaming: false,
   };
 }
 
@@ -60,6 +63,10 @@ function persistSession(id) {
   } else {
     localStorage.removeItem(SESSION_KEY);
   }
+}
+
+function renderAssistantHtml(content) {
+  return renderMarkdown(content || "");
 }
 
 async function loadHistory() {
@@ -99,6 +106,7 @@ async function handleClearSession() {
       role: "assistant",
       content: typeof error === "string" ? error : "清空会话失败，请稍后重试",
       time: formatTime(new Date()),
+      streaming: false,
     });
   } finally {
     clearing.value = false;
@@ -123,32 +131,65 @@ async function sendMessage(text) {
     role: "user",
     content,
     time: formatTime(new Date()),
+    streaming: false,
   });
   inputText.value = "";
   sending.value = true;
+
+  const assistantId = Date.now() + 1;
+  messages.value.push({
+    id: assistantId,
+    role: "assistant",
+    content: "",
+    time: formatTime(new Date()),
+    streaming: true,
+  });
   await scrollToBottom();
 
+  const assistantMsg = () => messages.value.find((m) => m.id === assistantId);
+
   try {
-    const data = await sendChatMessage({
-      message: content,
-      session_id: sessionId.value || undefined,
-    });
-    if (data?.session_id) {
-      persistSession(data.session_id);
+    await streamChatMessage(
+      {
+        message: content,
+        session_id: sessionId.value || undefined,
+      },
+      {
+        onSession: (id) => {
+          if (id) persistSession(id);
+        },
+        onToken: (token) => {
+          const msg = assistantMsg();
+          if (msg) msg.content += token;
+          scrollToBottom();
+        },
+        onDone: () => {
+          const msg = assistantMsg();
+          if (msg) {
+            msg.streaming = false;
+            msg.time = formatTime(new Date());
+          }
+        },
+        onError: (detail) => {
+          const msg = assistantMsg();
+          if (msg) {
+            msg.content = detail;
+            msg.streaming = false;
+          }
+        },
+      }
+    );
+    const msg = assistantMsg();
+    if (msg && !msg.content) {
+      msg.content = "暂无回复";
+      msg.streaming = false;
     }
-    messages.value.push({
-      id: Date.now() + 1,
-      role: "assistant",
-      content: data?.reply ?? data?.content ?? data?.message ?? "暂无回复",
-      time: formatTime(new Date()),
-    });
   } catch (error) {
-    messages.value.push({
-      id: Date.now() + 1,
-      role: "assistant",
-      content: typeof error === "string" ? error : "请求失败，请稍后重试",
-      time: formatTime(new Date()),
-    });
+    const msg = assistantMsg();
+    if (msg) {
+      msg.content = typeof error === "string" ? error : "请求失败，请稍后重试";
+      msg.streaming = false;
+    }
   } finally {
     sending.value = false;
     await scrollToBottom();
@@ -199,19 +240,26 @@ function onKeydown(event) {
         >
           <span v-if="msg.role === 'assistant'" class="msg-avatar">AI</span>
           <div class="message-bubble">
-            <p>{{ msg.content }}</p>
-            <time>{{ msg.time }}</time>
+            <div
+              v-if="msg.role === 'assistant' && msg.streaming && !msg.content"
+              class="thinking-box"
+            >
+              <span class="thinking-icon">✦</span>
+              <span class="thinking-label">思考中</span>
+              <span class="thinking-dots"><i /><i /><i /></span>
+            </div>
+            <p v-else-if="msg.role === 'assistant' && msg.streaming" class="streaming-text">
+              {{ msg.content }}<span class="stream-cursor" />
+            </p>
+            <div
+              v-else-if="msg.role === 'assistant'"
+              class="markdown-body"
+              v-html="renderAssistantHtml(msg.content)"
+            />
+            <p v-else class="plain-text">{{ msg.content }}</p>
+            <time v-if="!msg.streaming || msg.content">{{ msg.time }}</time>
           </div>
           <span v-if="msg.role === 'user'" class="msg-avatar msg-avatar--user">我</span>
-        </div>
-
-        <div v-if="sending" class="message-row message-row--assistant">
-          <span class="msg-avatar">AI</span>
-          <div class="message-bubble message-bubble--typing">
-            <span class="typing-dot" />
-            <span class="typing-dot" />
-            <span class="typing-dot" />
-          </div>
         </div>
 
         <div ref="messagesEndRef" />
@@ -229,7 +277,6 @@ function onKeydown(event) {
         >
           {{ prompt }}
         </button>
-        <p class="sidebar-hint">已接入 LangChain，回答将结合实时监测数据生成。</p>
       </aside>
     </div>
 
@@ -388,13 +435,6 @@ function onKeydown(event) {
   cursor: not-allowed;
 }
 
-.sidebar-hint {
-  margin-top: auto;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
 .message-row {
   display: flex;
   align-items: flex-start;
@@ -434,6 +474,7 @@ function onKeydown(event) {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
+  min-width: 80px;
 }
 
 .message-row--user .message-bubble {
@@ -441,7 +482,8 @@ function onKeydown(event) {
   border-color: rgba(61, 220, 132, 0.25);
 }
 
-.message-bubble p {
+.plain-text,
+.streaming-text {
   margin: 0;
   font-size: 14px;
   line-height: 1.55;
@@ -449,37 +491,87 @@ function onKeydown(event) {
   word-break: break-word;
 }
 
+.stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--accent-blue);
+  animation: cursor-blink 0.8s step-end infinite;
+}
+
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 .message-bubble time {
   display: block;
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 11px;
   color: var(--text-secondary);
 }
 
-.message-bubble--typing {
+.thinking-box {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 14px 18px;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
 }
 
-.typing-dot {
-  width: 7px;
-  height: 7px;
+.thinking-icon {
+  color: #7b5cff;
+  font-size: 14px;
+  animation: pulse-icon 1.4s ease-in-out infinite;
+}
+
+.thinking-label {
+  color: var(--accent-blue);
+  font-weight: 500;
+}
+
+.thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 14px;
+}
+
+.thinking-dots i {
+  display: block;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: var(--text-secondary);
-  animation: typing 1.2s infinite ease-in-out;
+  background: var(--accent-blue);
+  opacity: 0.35;
+  animation: dot-bounce 1.2s infinite ease-in-out;
 }
 
-.typing-dot:nth-child(2) {
+.thinking-dots i:nth-child(2) {
   animation-delay: 0.15s;
 }
 
-.typing-dot:nth-child(3) {
+.thinking-dots i:nth-child(3) {
   animation-delay: 0.3s;
 }
 
-@keyframes typing {
+@keyframes pulse-icon {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes dot-bounce {
   0%,
   80%,
   100% {
@@ -488,8 +580,62 @@ function onKeydown(event) {
   }
   40% {
     opacity: 1;
-    transform: translateY(-3px);
+    transform: translateY(-4px);
   }
+}
+
+.markdown-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.markdown-body :deep(p) {
+  margin: 0 0 10px;
+}
+
+.markdown-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-body :deep(strong) {
+  font-weight: 600;
+  color: #e8f4ff;
+}
+
+.markdown-body :deep(em) {
+  color: var(--text-secondary);
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  margin: 8px 0;
+  padding-left: 1.4em;
+}
+
+.markdown-body :deep(li) {
+  margin: 4px 0;
+}
+
+.markdown-body :deep(li::marker) {
+  color: var(--accent-blue);
+}
+
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3) {
+  margin: 12px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.markdown-body :deep(code) {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 13px;
 }
 
 .chat-input-bar {

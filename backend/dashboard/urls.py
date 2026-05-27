@@ -7,6 +7,7 @@ from .views import (
     ChatAPIView,
     ChatClearAPIView,
     ChatHistoryAPIView,
+    ChatStreamAPIView,
     DataAnalysisDetailAPIView,
     DataAnalysisListCreateAPIView,
     DeviceGPSAPIView,
@@ -47,6 +48,7 @@ urlpatterns = [
     #path("ai/analysis/", AIAnalysisAPIView.as_view(), name="ai-analysis"),
     # AI 聊天
     path("chat/", ChatAPIView.as_view(), name="chat"),
+    path("chat/stream/", ChatStreamAPIView.as_view(), name="chat-stream"),
     path("chat/history/", ChatHistoryAPIView.as_view(), name="chat-history"),
     path("chat/clear/", ChatClearAPIView.as_view(), name="chat-clear"),
 ]
