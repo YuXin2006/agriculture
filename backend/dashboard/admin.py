@@ -2,6 +2,8 @@ from django.contrib import admin
 
 from .models import (
     AlarmRecord,
+    ChatMessage,
+    ChatSession,
     DataAnalysisReport,
     DeviceNode,
     EnvMonitorRecord,
@@ -46,3 +48,16 @@ class AlarmAdmin(admin.ModelAdmin):
 class DataAnalysisReportAdmin(admin.ModelAdmin):
     list_display = ("id", "title", "region", "created_at")
     ordering = ("-created_at",)
+
+
+class ChatMessageInline(admin.TabularInline):
+    model = ChatMessage
+    extra = 0
+    readonly_fields = ("role", "content", "created_at")
+
+
+@admin.register(ChatSession)
+class ChatSessionAdmin(admin.ModelAdmin):
+    list_display = ("session_id", "created_at", "updated_at")
+    search_fields = ("session_id",)
+    inlines = [ChatMessageInline]

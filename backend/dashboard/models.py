@@ -122,6 +122,43 @@ class AlarmRecord(models.Model):
         verbose_name_plural = "告警记录"
 
 
+class ChatSession(models.Model):
+    session_id = models.CharField(max_length=64, unique=True, db_index=True, verbose_name="会话ID")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+
+    class Meta:
+        ordering = ["-updated_at"]
+        verbose_name = "聊天会话"
+        verbose_name_plural = "聊天会话"
+
+    def __str__(self):
+        return self.session_id
+
+
+class ChatMessage(models.Model):
+    ROLE_CHOICES = [
+        ("user", "用户"),
+        ("assistant", "助手"),
+        ("system", "系统"),
+    ]
+
+    session = models.ForeignKey(
+        ChatSession,
+        on_delete=models.CASCADE,
+        related_name="messages",
+        verbose_name="所属会话",
+    )
+    role = models.CharField(max_length=16, choices=ROLE_CHOICES, verbose_name="角色")
+    content = models.TextField(verbose_name="内容")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="发送时间")
+
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "聊天消息"
+        verbose_name_plural = "聊天消息"
+
+
 class DataAnalysisReport(models.Model):
     """数据分析模块：可保存的分析任务/报告。"""
 

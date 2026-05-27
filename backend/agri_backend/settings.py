@@ -1,7 +1,11 @@
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = "dev-only-secret-key"
 DEBUG = True
@@ -92,11 +96,19 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOW_ALL_ORIGINS = True
 
 
-MQTT_BROKER_HOST = "iot.skyate.com"
-MQTT_BROKER_PORT = 1883
+# MQTT 默认关闭；有设备后在 .env 中设置 MQTT_ENABLED=true 再启用
+MQTT_ENABLED = os.getenv("MQTT_ENABLED", "false").lower() in ("1", "true", "yes")
+MQTT_BROKER_HOST = os.getenv("MQTT_BROKER_HOST", "iot.skyate.com")
+MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT", "1883"))
 MQTT_TOPICS = [
     "agri/env",
     "agri/soil",
     "agri/alarm",
     "agri/device",
 ]
+
+# LangChain / 大模型配置（兼容 OpenAI 及国内 OpenAI 兼容接口）
+LLM_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY", "")
+LLM_API_BASE = os.getenv("OPENAI_API_BASE") or os.getenv("LLM_API_BASE", "")
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.3"))

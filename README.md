@@ -169,14 +169,21 @@ npm run dev
 }
 
 
--ai功能(chatbot)
+--------------ai功能(chatbot)------------------------------------
 前端接口
 sendChatMessage(data)	POST /api/chat/	发送消息
-getChatHistory(params)	GET /api/chat/history/	获取历史（预留）
-clearChatSession(data)	POST /api/chat/clear/	清空会话（预留）
+getChatHistory(params)	GET /api/chat/history/	获取历史
+clearChatSession(data)	POST /api/chat/clear/	清空会话
 
 发送消息的请求体约定：
 { message: "用户问题", session_id: "可选，多轮对话用" }
 
 期望响应字段（后端实现时对齐即可）：
 { reply: "AI 回复", session_id: "会话 ID" }
+
+后端实现
+API 路由（对应 dashboard.js）
+接口	              方法	                  说明
+/api/chat/	          POST	                 发送消息，返回 { reply，session_id }
+/api/chat/history/	  GET	                 按 session_id 拉取历史
+/api/chat/clear/	  POST	                 清空会话并返回新 session_id

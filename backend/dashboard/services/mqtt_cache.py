@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 import threading
 from collections import deque
@@ -40,7 +40,7 @@ MQTT_TOPICS = getattr(
     ["agri/env", "agri/soil", "agri/sensor", "agri/alarm", "agri/device"],
 )
 MQTT_CLIENT_ID = getattr(settings, "MQTT_CLIENT_ID", "django-overview-mqtt-client")
-MQTT_ENABLED = getattr(settings, "MQTT_ENABLED", True)
+MQTT_ENABLED = getattr(settings, "MQTT_ENABLED", False)
 
 _cache = {
     "env": None,

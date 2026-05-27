@@ -1,6 +1,7 @@
 # [已注释重构] AI分析视图
 from .ai import AIAnalysisAPIView
 from .alarm import AlarmDetailAPIView, AlarmListCreateAPIView
+from .chat import ChatAPIView, ChatClearAPIView, ChatHistoryAPIView
 from .base import ModelCRUDDetailAPIView, ModelCRUDListCreateAPIView
 # [已注释重构] 数据分析视图
 from .data_analysis import DataAnalysisDetailAPIView, DataAnalysisListCreateAPIView
@@ -25,6 +26,9 @@ __all__ = [
     "AlarmListCreateAPIView",
     "AlarmDetailAPIView",
     "AIAnalysisAPIView",
+    "ChatAPIView",
+    "ChatHistoryAPIView",
+    "ChatClearAPIView",
     "ModelCRUDListCreateAPIView",
     "ModelCRUDDetailAPIView",
 ]

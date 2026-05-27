@@ -1,11 +1,16 @@
 <script setup>
-import { nextTick, ref } from "vue";
-import { sendChatMessage } from "../api/dashboard";
+import { nextTick, onMounted, ref } from "vue";
+import { clearChatSession, getChatHistory, sendChatMessage } from "../api/dashboard";
+
+const SESSION_KEY = "agri_chat_session_id";
+const WELCOME_MESSAGE =
+  "你好，我是智慧农业助手。你可以向我咨询作物监测、环境数据、设备状态、告警分析等问题，我会结合系统数据为你解答。";
 
 const inputText = ref("");
 const sending = ref(false);
+const clearing = ref(false);
 const messagesEndRef = ref(null);
-const sessionId = ref("");
+const sessionId = ref(localStorage.getItem(SESSION_KEY) || "");
 
 const quickPrompts = [
   "当前基地温湿度是否正常？",
@@ -14,15 +19,7 @@ const quickPrompts = [
   "帮我分析一下设备在线情况",
 ];
 
-const messages = ref([
-  {
-    id: 1,
-    role: "assistant",
-    content:
-      "你好，我是智慧农业助手。你可以向我咨询作物监测、环境数据、设备状态、告警分析等问题，我会结合系统数据为你解答。",
-    time: formatTime(new Date()),
-  },
-]);
+const messages = ref([]);
 
 function formatTime(date) {
   const h = String(date.getHours()).padStart(2, "0");
@@ -30,20 +27,91 @@ function formatTime(date) {
   return `${h}:${m}`;
 }
 
+function parseTime(createdAt) {
+  if (!createdAt) return formatTime(new Date());
+  const d = new Date(createdAt.replace(/-/g, "/"));
+  return Number.isNaN(d.getTime()) ? createdAt.slice(11, 16) : formatTime(d);
+}
+
+function setWelcomeMessage() {
+  messages.value = [
+    {
+      id: "welcome",
+      role: "assistant",
+      content: WELCOME_MESSAGE,
+      time: formatTime(new Date()),
+    },
+  ];
+}
+
+function mapHistoryItem(item, index) {
+  return {
+    id: `${item.role}-${index}-${item.created_at || index}`,
+    role: item.role,
+    content: item.content,
+    time: parseTime(item.created_at),
+  };
+}
+
+function persistSession(id) {
+  sessionId.value = id || "";
+  if (id) {
+    localStorage.setItem(SESSION_KEY, id);
+  } else {
+    localStorage.removeItem(SESSION_KEY);
+  }
+}
+
+async function loadHistory() {
+  if (!sessionId.value) {
+    setWelcomeMessage();
+    return;
+  }
+  try {
+    const data = await getChatHistory({ session_id: sessionId.value });
+    if (data?.session_id) {
+      persistSession(data.session_id);
+    }
+    const list = Array.isArray(data?.messages) ? data.messages : [];
+    if (list.length) {
+      messages.value = list.map(mapHistoryItem);
+    } else {
+      setWelcomeMessage();
+    }
+  } catch {
+    setWelcomeMessage();
+  }
+}
+
+async function handleClearSession() {
+  if (clearing.value || sending.value) return;
+  clearing.value = true;
+  try {
+    const data = await clearChatSession({
+      session_id: sessionId.value || undefined,
+    });
+    persistSession(data?.session_id);
+    setWelcomeMessage();
+    await scrollToBottom();
+  } catch (error) {
+    messages.value.push({
+      id: Date.now(),
+      role: "assistant",
+      content: typeof error === "string" ? error : "清空会话失败，请稍后重试",
+      time: formatTime(new Date()),
+    });
+  } finally {
+    clearing.value = false;
+  }
+}
+
+onMounted(() => {
+  loadHistory();
+});
+
 async function scrollToBottom() {
   await nextTick();
   messagesEndRef.value?.scrollIntoView({ behavior: "smooth" });
-}
-
-function mockReply(question) {
-  const replies = [
-    "根据当前监测数据，基地整体环境处于正常范围。如需查看具体传感器数值，建议前往「数据总览」页面。",
-    "土壤湿度偏低时，建议检查灌溉系统是否正常运行，并适当调整浇水频率。若持续偏低，可排查传感器是否故障。",
-    "你可以在「告警记录」页面查看完整告警列表。近期需重点关注温湿度异常和设备离线类告警。",
-    "目前 Mesh 网络运行稳定，大部分节点在线。若有离线设备，请检查节点供电与信号覆盖。",
-  ];
-  const index = Math.abs(question.length) % replies.length;
-  return replies[index];
 }
 
 async function sendMessage(text) {
@@ -66,7 +134,7 @@ async function sendMessage(text) {
       session_id: sessionId.value || undefined,
     });
     if (data?.session_id) {
-      sessionId.value = data.session_id;
+      persistSession(data.session_id);
     }
     messages.value.push({
       id: Date.now() + 1,
@@ -74,11 +142,11 @@ async function sendMessage(text) {
       content: data?.reply ?? data?.content ?? data?.message ?? "暂无回复",
       time: formatTime(new Date()),
     });
-  } catch {
+  } catch (error) {
     messages.value.push({
       id: Date.now() + 1,
       role: "assistant",
-      content: mockReply(content),
+      content: typeof error === "string" ? error : "请求失败，请稍后重试",
       time: formatTime(new Date()),
     });
   } finally {
@@ -105,10 +173,20 @@ function onKeydown(event) {
           <p>基于 LangChain · 可咨询监测数据与农事建议</p>
         </div>
       </div>
-      <span class="chat-status">
-        <span class="status-dot" />
-        在线
-      </span>
+      <div class="chat-header__actions">
+        <button
+          type="button"
+          class="clear-btn"
+          :disabled="clearing || sending"
+          @click="handleClearSession"
+        >
+          清空会话
+        </button>
+        <span class="chat-status">
+          <span class="status-dot" />
+          在线
+        </span>
+      </div>
     </div>
 
     <div class="chat-body">
@@ -151,7 +229,7 @@ function onKeydown(event) {
         >
           {{ prompt }}
         </button>
-        <p class="sidebar-hint">后端接入 LangChain 后，将返回基于实时数据的智能回答。</p>
+        <p class="sidebar-hint">已接入 LangChain，回答将结合实时监测数据生成。</p>
       </aside>
     </div>
 
@@ -217,6 +295,34 @@ function onKeydown(event) {
   margin: 4px 0 0;
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.chat-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.clear-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.clear-btn:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.1);
+  color: var(--accent-red);
+  border-color: rgba(255, 107, 107, 0.35);
+}
+
+.clear-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .chat-status {

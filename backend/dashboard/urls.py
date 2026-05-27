@@ -4,6 +4,9 @@ from .views import (
     AIAnalysisAPIView,
     AlarmDetailAPIView,
     AlarmListCreateAPIView,
+    ChatAPIView,
+    ChatClearAPIView,
+    ChatHistoryAPIView,
     DataAnalysisDetailAPIView,
     DataAnalysisListCreateAPIView,
     DeviceGPSAPIView,
@@ -42,4 +45,8 @@ urlpatterns = [
     path("alarm/<int:pk>/", AlarmDetailAPIView.as_view(), name="alarm-detail"),
     # AI 分析
     #path("ai/analysis/", AIAnalysisAPIView.as_view(), name="ai-analysis"),
+    # AI 聊天
+    path("chat/", ChatAPIView.as_view(), name="chat"),
+    path("chat/history/", ChatHistoryAPIView.as_view(), name="chat-history"),
+    path("chat/clear/", ChatClearAPIView.as_view(), name="chat-clear"),
 ]
