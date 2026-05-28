@@ -7,11 +7,11 @@
         <p class="updated">最后更新：{{ meta.last_updated }}</p>
       </div>
       <div class="page-header__right">
-        <span class="weather-pill">
-          {{ meta.weather?.icon || "☁" }}
-          {{ meta.weather?.text || "—" }}
+        <button type="button" class="weather-pill" @click="weatherOpen = true">
+          {{ liveWeather.icon || "☁" }}
+          {{ liveWeather.text || "—" }}
           {{ weatherTemp }}
-        </span>
+        </button>
         <button type="button" class="icon-btn" aria-label="通知">🔔</button>
         <div class="user-pill">
           <span class="user-avatar">管</span>
@@ -168,6 +168,12 @@
         </div>
       </div>
     </section>
+
+    <WeatherModal
+      v-model:visible="weatherOpen"
+      v-model:city-id="weatherCityId"
+      @summary="onWeatherSummary"
+    />
   </div>
 </template>
 
@@ -175,17 +181,26 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import * as echarts from "echarts";
 import { getOverview } from "../api/dashboard";
+import WeatherModal from "../components/WeatherModal.vue";
 
 const loading = ref(false);
 const nodePage = ref(1);
 const nodePageSize = 8;
 const nodeTotalPages = ref(0);
 
+const weatherOpen = ref(false);
+const weatherCityId = ref(localStorage.getItem("weather_city_id") || "beijing");
+const liveWeather = ref({ text: "—", temperature: null, icon: "☁" });
+
 const meta = ref({
   location: "示范种植基地 · 温室 A 区",
   last_updated: "—",
   weather: { text: "多云", temperature: null, icon: "☁" },
 });
+
+const onWeatherSummary = (summary) => {
+  liveWeather.value = summary;
+};
 const summaryStats = ref([]);
 const sensorCards = ref([]);
 const alarms = ref([]);
@@ -202,7 +217,7 @@ let soilChart;
 let airChart;
 
 const weatherTemp = computed(() => {
-  const t = meta.value.weather?.temperature;
+  const t = liveWeather.value.temperature;
   return t != null && t !== "" ? `${t}°C` : "";
 });
 
@@ -485,6 +500,15 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.weather-pill {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.weather-pill:hover {
+  background: var(--bg-card-hover);
 }
 
 .icon-btn {

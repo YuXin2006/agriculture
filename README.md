@@ -35,7 +35,7 @@ npm run dev
 
 ## 页面说明
 
-- 数据总览：按设计图完成静态布局（使用占位数据）
+- 数据总览：基地总览看板；右上角可点击天气条查看近 7 日预报（见下文「天气预报」）
 - 设备管理：可自行对设备增删改查
 - 告警中心：完整的告警功能页面
 - 系统设置：空白占位页
@@ -228,3 +228,59 @@ frontend/src/views/AlarmCenter.vue（由空白页改为完整功能页）
 快捷操作：「处理」将状态改为 resolved；编辑、删除
 交互：顶部 Toast 提示、刷新、分页跳转（与设备管理页相同模式）
 样式：dash-card、深色表单、级别/状态标签色（与总览页告警配色一致）
+
+--------------------天气预报（数据总览）--------------------------
+功能说明
+  * 入口：数据总览页（Overview）右上角天气条，点击打开弹窗
+  * 展示：所选城市近 7 日每日天气（emoji + 晴/多云/雨/雪/冰雹等）、最低/最高气温，以及日出、日落时间
+  * 头部天气条：显示当前城市的实时气温与简要天气描述（晴/多云/雨等）
+  * 城市选择：下拉框切换；范围为中国各省省会 + 深圳（北上广深中深圳单独列出）
+  * 记忆：上次选择的城市保存在浏览器 localStorage，键名 weather_city_id，默认北京
+
+数据来源（前端直连，无需后端接口与 API Key）
+  * 使用 Open-Meteo 免费预报 API：https://open-meteo.com/
+  * 请求示例（由前端按城市经纬度拼接）：
+    GET https://api.open-meteo.com/v1/forecast
+      ?latitude=39.90&longitude=116.40
+      &current=temperature_2m,weather_code
+      &daily=temperature_2m_max,temperature_2m_min,sunrise,sunset
+      &timezone=Asia/Shanghai
+      &forecast_days=7
+
+涉及文件（维护时主要改这里）
+  * frontend/src/components/WeatherModal.vue — 城市列表 CITIES、弹窗 UI、Open-Meteo 请求与解析
+  * frontend/src/views/Overview.vue — 天气按钮、引入 WeatherModal、接收 summary 更新头部显示
+
+
+
+天气预报功能数据流图：
+
+用户选择城市
+     ↓
+onCityChange() 触发
+     ↓
+localCityId 更新
+     ↓
+┌─────────────┐    ┌─────────────────┐
+│ localStorage│    │ emit(update:cityId) │
+└─────────────┘    └─────────────────┘
+                          ↓
+                     watch 监听到变化
+                          ↓
+                     load(cityId)
+                          ↓
+                fetchForecast(cityId)
+                          ↓
+              ┌─────────────────────┐
+              │ Open-Meteo API 请求 │
+              └─────────────────────┘
+                          ↓
+              ┌─────────────────────┐
+              │ 解析数据 → daily[]  │
+              └─────────────────────┘
+                          ↓
+              ┌─────────────────────┐
+              │ emit(summary) 通知  │
+              │    父组件更新天气条   │
+              └─────────────────────┘
+--------------
