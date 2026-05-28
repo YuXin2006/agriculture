@@ -40,6 +40,23 @@ export const getDeviceGps = (id) => {
   return http.get(`/api/devices/${id}/gps/`);
 };
 
+// 告警记录列表
+export const getAlarmList = (params = {}) => {
+  return http.get("/api/alarm/", params);
+};
+// 新增告警
+export const createAlarm = (data) => {
+  return http.post("/api/alarm/", data);
+};
+// 更新告警
+export const updateAlarm = (id, data) => {
+  return http.put(`/api/alarm/${id}/`, data);
+};
+// 删除告警
+export const deleteAlarm = (id) => {
+  return http.delete(`/api/alarm/${id}/`);
+};
+
 // 发送 AI 聊天消息（非流式，备用）
 export const sendChatMessage = (data) => {
   return http.post("/api/chat/", data, { timeout: 120000 });
