@@ -32,15 +32,15 @@ def _lazy_import_models():
 
 logger = logging.getLogger(__name__)
 
-MQTT_BROKER_HOST = getattr(settings, "MQTT_BROKER_HOST", "localhost")
+MQTT_BROKER_HOST = getattr(settings, "MQTT_BROKER_HOST", "iot.skyate.com")
 MQTT_BROKER_PORT = getattr(settings, "MQTT_BROKER_PORT", 1883)
 MQTT_TOPICS = getattr(
     settings,
     "MQTT_TOPICS",
     ["agri/env", "agri/soil", "agri/sensor", "agri/alarm", "agri/device"],
 )
-MQTT_CLIENT_ID = getattr(settings, "MQTT_CLIENT_ID", "django-overview-mqtt-client")
-MQTT_ENABLED = getattr(settings, "MQTT_ENABLED", False)
+MQTT_CLIENT_ID = getattr(settings, "MQTT_CLIENT_ID", "BENBEN")
+MQTT_ENABLED = getattr(settings, "MQTT_ENABLED", True)
 
 _cache = {
     "env": None,
@@ -201,56 +201,69 @@ def _mqtt_runner():
         logger.exception("MQTT runner failed: %s", exc)
 
 
+_mqtt_thread = None
+
+
 def start_mqtt():
+    global _mqtt_thread
     if not MQTT_ENABLED:
         return
-    thread = threading.Thread(target=_mqtt_runner, daemon=True)
-    thread.start()
+    if _mqtt_thread is not None and _mqtt_thread.is_alive():
+        return
+    _mqtt_thread = threading.Thread(target=_mqtt_runner, daemon=True)
+    _mqtt_thread.start()
+
+
+def get_mqtt_runtime_status():
+    """供运维管理：进程内 MQTT 线程与缓存概况（不含密码）。"""
+    thread_alive = _mqtt_thread is not None and _mqtt_thread.is_alive()
+    env = _cache.get("env")
+    soil = _cache.get("soil")
+    sensor = _cache.get("sensor")
+    return {
+        "thread_alive": thread_alive,
+        "cache": {
+            "env": env is not None,
+            "soil": soil is not None,
+            "sensor": sensor is not None,
+            "device_count": len(_cache.get("devices") or []),
+            "alarm_count": len(_cache.get("alarms") or []),
+            "env_history_size": len(_cache.get("env_history") or []),
+            "soil_history_size": len(_cache.get("soil_history") or []),
+        },
+        "latest": {
+            "env_at": _format_cache_time(env),
+            "soil_at": _format_cache_time(soil),
+            "sensor_at": _format_cache_time(sensor),
+            "env_node_id": (env or {}).get("node_id"),
+            "soil_node_id": (soil or {}).get("node_id"),
+        },
+    }
+
+
+def _format_cache_time(data):
+    if not isinstance(data, dict):
+        return None
+    for key in ("recorded_at", "created_at", "updated_at"):
+        value = data.get(key)
+        if value is None:
+            continue
+        if isinstance(value, datetime):
+            return timezone.localtime(value).strftime("%Y-%m-%d %H:%M:%S")
+        return str(value)[:19].replace("T", " ")
+    return None
 
 
 def get_latest_env():
-    # 确保模型已导入
-    if EnvMonitorRecord is None:
-        _lazy_import_models()
-    
-    cached = _cache["env"]
-    if cached:
-        return cached
-    # 缓存为空，从数据库读取最新记录
-    try:
-        return EnvMonitorRecord.objects.order_by("-recorded_at").first()
-    except Exception:
-        return None
+    return _cache["env"]
 
 
 def get_latest_soil():
-    # 确保模型已导入
-    if SoilMonitorRecord is None:
-        _lazy_import_models()
-    
-    cached = _cache["soil"]
-    if cached:
-        return cached
-    # 缓存为空，从数据库读取最新记录
-    try:
-        return SoilMonitorRecord.objects.order_by("-recorded_at").first()
-    except Exception:
-        return None
+    return _cache["soil"]
 
 
 def get_latest_sensor():
-    # 确保模型已导入
-    if SensorData is None:
-        _lazy_import_models()
-    
-    cached = _cache["sensor"]
-    if cached:
-        return cached
-    # 缓存为空，从数据库读取最新记录
-    try:
-        return SensorData.objects.order_by("-created_at").first()
-    except Exception:
-        return None
+    return _cache["sensor"]
 
 
 def get_device_list():

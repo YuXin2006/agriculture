@@ -9,6 +9,7 @@ from .devices import DeviceGPSAPIView, DeviceNodeDetailAPIView, DeviceNodeListCr
 from .env_monitor import EnvMonitorDetailAPIView, EnvMonitorListCreateAPIView
 from .overview import OverviewAPIView, SensorDataDetailAPIView, SensorDataListCreateAPIView
 from .soil_monitor import SoilMonitorDetailAPIView, SoilMonitorListCreateAPIView
+from .system import SystemStatusAPIView
 
 __all__ = [
     "OverviewAPIView",
@@ -30,6 +31,7 @@ __all__ = [
     "ChatStreamAPIView",
     "ChatHistoryAPIView",
     "ChatClearAPIView",
+    "SystemStatusAPIView",
     "ModelCRUDListCreateAPIView",
     "ModelCRUDDetailAPIView",
 ]

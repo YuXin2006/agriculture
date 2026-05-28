@@ -5,7 +5,7 @@
 - `frontend/`：Vue 3 + Vite 前端
 - `backend/`：Django 后端
 
-## 1. 启动后端（Django）
+<!-- ## 1. 启动后端（Django）
 
 ```bash
 cd backend
@@ -26,8 +26,11 @@ python manage.py runserver 8000
 cd frontend
 npm install
 npm run dev
+``` -->
+一键启动项目
+```bash
+npm run dev
 ```
-
 默认打开 `http://127.0.0.1:5173/`，首页即“数据总览”页面。
 
 ## 页面说明
@@ -36,7 +39,6 @@ npm run dev
 - 设备管理：可自行对设备增删改查
 - 告警中心：完整的告警功能页面
 - 系统设置：空白占位页
-- 帮助中心：空白占位页
 - 问问ai:一个chatbot可根据上传的数据进行分析
 
 
@@ -188,3 +190,41 @@ API 路由（对应 dashboard.js）
 /api/chat/	          POST	                 发送消息，返回 { reply，session_id }
 /api/chat/history/	  GET	                 按 session_id 拉取历史
 /api/chat/clear/	  POST	                 清空会话并返回新 session_id
+
+
+-----------------运维中心-------------------------------------------
+后端说明
+  *新接口 GET /api/system/status/
+   聚合返回：设备/告警摘要、API/数据库/MQTT/LLM 服务状态、各通道数据新鲜度、MQTT 缓存概况、数据库记录统计。
+  *新文件 backend/dashboard/services/system_status.py — 状态组装逻辑
+  *新文件 backend/dashboard/views/system.py — API 视图
+  *增强 mqtt_cache.py — 记录 MQTT 线程状态，并提供 get_mqtt_runtime_status() 供看板使用
+前端说明
+  *SystemSettings.vue — 运维看板页面（只读）
+      1.顶部 4 张统计卡：在线设备、未处理告警、MQTT 状态、采集频率
+      2.服务状态：API、数据库、MQTT、大模型
+      3.数据采集：env/soil/sensor 最近时间与来源（缓存 vs 数据库）
+      4.MQTT 订阅主题、缓存概况、数据库统计
+      5.快捷入口跳转总览/设备/告警/AI
+      6.每 30 秒自动刷新，可手动刷新
+  *dashboard.js — 新增 getSystemStatus()
+  *路由页标题改为「运维看板」（侧边栏仍为「系统设置」）
+
+--------------------告警记录--------------------------
+数据模型对应
+字段	                    页面用途
+node / node_id	            表单下拉选择节点；列表显示节点编号
+level (info/warn/critical)	表单选择与彩色标签
+title / message / detail	登记表单 + 列表展示
+metric_value / threshold	表单数值输入；列表显示「当前值 · 阈值」
+status (active/resolved)	表单与状态标签；一键「处理」
+created_at	                列表告警时间
+
+前端页面说明
+frontend/src/views/AlarmCenter.vue（由空白页改为完整功能页）
+统计卡片：告警总数、当前页未处理数、当前页严重数
+登记表单：支持新增/编辑，字段与 AlarmSerializer 一致
+告警列表：分页表格（每页 10 条，与后端 default_page_size 一致）
+快捷操作：「处理」将状态改为 resolved；编辑、删除
+交互：顶部 Toast 提示、刷新、分页跳转（与设备管理页相同模式）
+样式：dash-card、深色表单、级别/状态标签色（与总览页告警配色一致）

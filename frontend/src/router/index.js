@@ -38,7 +38,7 @@ const routes = [
         path: "system-settings",
         name: "system-settings",
         component: SystemSettings,
-        meta: { title: "系统设置" },
+        meta: { title: "运维中心" },
       },
       {
         path: "help-center",

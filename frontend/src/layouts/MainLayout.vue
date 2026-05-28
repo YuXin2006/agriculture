@@ -8,7 +8,7 @@ const menuItems = [
   { label: "数据总览", path: "/overview", icon: "overview" },
   { label: "设备管理", path: "/device-manage", icon: "device" },
   { label: "告警记录", path: "/alarm-center", icon: "alarm" },
-  { label: "系统设置", path: "/system-settings", icon: "settings" },
+  { label: "运维管理", path: "/system-settings", icon: "settings" },
   { label: "问问AI", path: "/chat", icon: "ai" },
 ];
 
@@ -40,7 +40,7 @@ const isFlushPage = computed(() => ["/overview", "/device-manage"].includes(rout
         </RouterLink>
       </nav>
 
-      <div class="mesh-card">
+       <div class="mesh-card">
         <div class="mesh-card__title">Mesh 网络状态</div>
         <div class="mesh-card__row">
           <span class="status-dot" />
@@ -51,7 +51,7 @@ const isFlushPage = computed(() => ["/overview", "/device-manage"].includes(rout
           <div><span>网络质量</span><strong>优秀 92%</strong></div>
         </div>
         <div class="mesh-card__time">更新于 2026-05-23 14:32:08</div>
-      </div>
+      </div> 
     </aside>
 
     <main class="main-content">

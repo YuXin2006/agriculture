@@ -57,6 +57,11 @@ export const deleteAlarm = (id) => {
   return http.delete(`/api/alarm/${id}/`);
 };
 
+// 系统运行状态（运维看板）
+export const getSystemStatus = () => {
+  return http.get("/api/system/status/");
+};
+
 // 发送 AI 聊天消息（非流式，备用）
 export const sendChatMessage = (data) => {
   return http.post("/api/chat/", data, { timeout: 120000 });

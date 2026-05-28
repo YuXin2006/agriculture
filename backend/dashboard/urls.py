@@ -20,6 +20,7 @@ from .views import (
     SensorDataListCreateAPIView,
     SoilMonitorDetailAPIView,
     SoilMonitorListCreateAPIView,
+    SystemStatusAPIView,
 )
 
 
@@ -41,6 +42,8 @@ urlpatterns = [
     # 数据分析
     #path("data-analysis/", DataAnalysisListCreateAPIView.as_view(), name="data-analysis-list"),
     #path("data-analysis/<int:pk>/", DataAnalysisDetailAPIView.as_view(), name="data-analysis-detail"),
+    # 系统状态（运维管理）
+    path("system/status/", SystemStatusAPIView.as_view(), name="system-status"),
     # 告警记录
     path("alarm/", AlarmListCreateAPIView.as_view(), name="alarm-list"),
     path("alarm/<int:pk>/", AlarmDetailAPIView.as_view(), name="alarm-detail"),
