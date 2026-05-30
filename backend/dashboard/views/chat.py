@@ -4,7 +4,7 @@ from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from dashboard.services.chat_cache import *
 from dashboard.services.chat_agent import (
     ChatServiceError,
     clear_chat_session,

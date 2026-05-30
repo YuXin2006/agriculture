@@ -1,15 +1,21 @@
 import uuid
-
+from rest_framework.response import Response
 from django.conf import settings
 from django.utils import timezone
 
 from dashboard.models import ChatMessage, ChatSession
 from dashboard.services.chat_context import build_agri_context_text
+from dashboard.services.chat_cache import (
+    cache_messages,
+    get_messages,
+    cache_session,
+    get_session,
+)
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage
 
-
+from dashboard.services.chat_cache import *
 
 
 
@@ -55,7 +61,10 @@ def _get_or_create_session(session_id: str | None) -> ChatSession:
         session = ChatSession.objects.filter(session_id=session_id).first()
         if session:
             return session
-    return ChatSession.objects.create(session_id=uuid.uuid4().hex)
+    session = ChatSession.objects.create(session_id=uuid.uuid4().hex)
+    # 缓存新会话
+    cache_session(session)
+    return session
 
 
 def _history_to_langchain(session: ChatSession) -> list:
@@ -88,7 +97,19 @@ def _prepare_chat(message: str, session_id: str | None):
         raise ChatServiceError("message 不能为空")
 
     session = _get_or_create_session(session_id)
-    ChatMessage.objects.create(session=session, role="user", content=message)
+    user_msg = ChatMessage.objects.create(session=session, role="user", content=message)
+    
+    # 缓存用户消息
+    cache_messages(
+        session_id=session.session_id,
+        role=user_msg.role,
+        content=user_msg.content,
+        message_id=user_msg.id,
+        created_at=timezone.localtime(user_msg.created_at).isoformat(),
+    )
+    
+    # 更新会话缓存
+    cache_session(session)
 
     context = build_agri_context_text()
     llm_messages = [
@@ -104,8 +125,20 @@ def send_chat_message(message: str, session_id: str | None = None) -> dict:
     response = llm.invoke(llm_messages)
     reply = (response.content or "").strip() or "暂无回复"
 
-    ChatMessage.objects.create(session=session, role="assistant", content=reply)
+    assistant_msg = ChatMessage.objects.create(session=session, role="assistant", content=reply)
     session.save(update_fields=["updated_at"])
+    
+    # 缓存助手回复
+    cache_messages(
+        session_id=session.session_id,
+        role=assistant_msg.role,
+        content=assistant_msg.content,
+        message_id=assistant_msg.id,
+        created_at=timezone.localtime(assistant_msg.created_at).isoformat(),
+    )
+    
+    # 更新会话缓存
+    cache_session(session)
 
     return {"reply": reply, "session_id": session.session_id}
 
@@ -124,8 +157,21 @@ def stream_chat_events(message: str, session_id: str | None = None):
             yield {"type": "token", "content": token}
 
     reply = "".join(parts).strip() or "暂无回复"
-    ChatMessage.objects.create(session=session, role="assistant", content=reply)
+    assistant_msg = ChatMessage.objects.create(session=session, role="assistant", content=reply)
     session.save(update_fields=["updated_at"])
+    
+    # 缓存助手回复
+    cache_messages(
+        session_id=session.session_id,
+        role=assistant_msg.role,
+        content=assistant_msg.content,
+        message_id=assistant_msg.id,
+        created_at=timezone.localtime(assistant_msg.created_at).isoformat(),
+    )
+    
+    # 更新会话缓存
+    cache_session(session)
+    
     yield {"type": "done", "reply": reply}
 
 
@@ -133,6 +179,12 @@ def get_chat_history(session_id: str | None = None) -> dict:
     if not session_id:
         return {"session_id": None, "messages": []}
 
+    # 优先从缓存获取
+    cached_messages = get_messages(session_id)
+    if cached_messages:
+        return {"session_id": session_id, "messages": cached_messages}
+
+    # 从数据库读取
     session = ChatSession.objects.filter(session_id=session_id).first()
     if not session:
         return {"session_id": session_id, "messages": []}
@@ -147,6 +199,6 @@ def get_chat_history(session_id: str | None = None) -> dict:
 def clear_chat_session(session_id: str | None = None) -> dict:
     if session_id:
         ChatSession.objects.filter(session_id=session_id).delete()
-
     session = ChatSession.objects.create(session_id=uuid.uuid4().hex)
+    cache_session(session)
     return {"session_id": session.session_id, "cleared": True}
