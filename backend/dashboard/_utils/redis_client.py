@@ -59,14 +59,14 @@ class RedisClient:
     
     def lpush(self, key, data, maxlen=None, expire=None):
         """向列表头部添加数据（支持JSON序列化）"""
-        pipeline = self._client.pipeline()
+        pipeline = self._client.pipeline()#创建redis管道对象，可以执行批量发送多个命令到redis服务器
         pipeline.lpush(key, json.dumps(data))
         if maxlen:
             pipeline.ltrim(key, 0, maxlen - 1)
         if expire:
             pipeline.expire(key, expire)
         return self._execute(pipeline.execute)
-    
+    #这里把三个命令(lpush,ltrim,expire)放在一个管道里执行，减少网络往返，提高效率
     def lrange(self, key, start=0, end=-1):
         """获取列表数据（自动JSON反序列化）"""
         result = self._execute(self._client.lrange, key, start, end)

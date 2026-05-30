@@ -59,3 +59,7 @@ frontend/.env
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+## --- Redis ---
+*.rdb
+*.aof

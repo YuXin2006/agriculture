@@ -226,7 +226,7 @@ def start_mqtt():
     global _mqtt_thread
     if not MQTT_ENABLED or (_mqtt_thread and _mqtt_thread.is_alive()):
         return
-    _mqtt_thread = threading.Thread(target=_mqtt_runner, daemon=True)
+    _mqtt_thread = threading.Thread(target=_mqtt_runner, daemon=True)#创建守护线程，目标函数为 _mqtt_runner
     _mqtt_thread.start()
 
 # ==================== 获取数据函数 ====================

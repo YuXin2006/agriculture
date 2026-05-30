@@ -286,6 +286,9 @@ localCityId 更新
 --------------
 
 ## 缓存设计方案
+
+核心架构-三个存储层:redis,_cache内存降级缓存.数据库
+
 ---------------redis数据类型和缓存键设计--------------------------
 缓存键设计               对应的表
 agri:latest:env         EnvMonitorRecord     hash
@@ -298,7 +301,84 @@ agri:history:soil       SoilMonitorRecord     list
 
 agri:summary            多表聚合               string
 
+1. 
+redis_client的redis缓存操作设计
 
+其他函数说明
+_test_connection(self) — 测试连接是否成功
+_execute(self, func, *args, **kwargs) — 处理异常的统一执行方法
+
+
+主要函数说明  :
+hash类型操作
+hset(self,key,data,expire)
+hgetall(self,key)
+
+list类型操作
+lpush(self,key,data,maxlen,expire) <span style="color:red;"> （用到了pipeline对象）</span>
+lrange(self,key,start,end=-1) <span style="color:red;"> （json->python对象 json.loads方法 python对象->json json.dumps方法）</span>
+
+string类型操作
+set(self,key,value,expire)
+get(self,key)
+
+2.  
+mqtt_cache(services层的redis应用)
+
+通过_cache字典实现设计了内存降级缓存 
+
+主要函数更改说明:
+  _update_env
+   先更新redis缓存
+  ```python
+  redis_client.hset(KEY_LATEST_ENV, data,   expire=EXPIRE_LATEST_DATA)
+  redis_client.lpush(KEY_HISTORY_ENV, data, maxlen=HISTORY_WINDOW_SIZE, expire=EXPIRE_HISTORY)
+  ```
+   再更新_cache缓存
+  ```python
+  _cache[KEY_LATEST_ENV] = data
+  ```
+   最后更新数据库缓存
+   ```python
+   EnvMonitorRecord.objects.create(**data)
+   ```
+
+
+  _update_soil
+  _update_sensor
+  _update_devices
+  _update_alarms
+
+
+其他函数说明
+_mqtt_runner()
+<span style="color:red;"> 
+client.loop_forever()	阻塞式循环：持续监听消息（直到断开连接）
+<span style="color:red;"> 
+start_mqtt()
+
+```python
+_mqtt_thread = threading.Thread(target=_mqtt_runner, daemon=True)
+```
+<span style="color:red;"> 
+守护线程：当主线程结束时自动退出，适合后台任务
+
+因为_mqtt_runner()是一个阻塞式循环，所以需要在守护线程中运行，否则会导致主线程阻塞，无法执行其他任务
+
+MQTT 客户端需要持续监听消息，是一个典型的后台服务，当 Django 服务器关闭时，MQTT 连接自然应该断开
+
+
+除了 MQTT 客户端，守护线程还常用于：
+
+场景	    示例
+后台监控	   定时检查系统状态
+日志收集	   异步写入日志文件
+缓存清理	   定时清理过期缓存
+心跳检测	  定期发送心跳包
+
+<span style="color:red;"> 
+
+get_mqtt_runtime_status()
 
 
 
