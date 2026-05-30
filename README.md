@@ -171,7 +171,7 @@ npm run dev
     "created_at": "2024-01-15 14:30:00"
 }
 
-
+## ai功能
 --------------ai功能(chatbot)------------------------------------
 前端接口
 sendChatMessage(data)	POST /api/chat/	发送消息
@@ -191,7 +191,7 @@ API 路由（对应 dashboard.js）
 /api/chat/history/	  GET	                 按 session_id 拉取历史
 /api/chat/clear/	  POST	                 清空会话并返回新 session_id
 
-
+## 运维中心
 -----------------运维中心-------------------------------------------
 后端说明
   *新接口 GET /api/system/status/
@@ -209,7 +209,7 @@ API 路由（对应 dashboard.js）
       6.每 30 秒自动刷新，可手动刷新
   *dashboard.js — 新增 getSystemStatus()
   *路由页标题改为「运维看板」（侧边栏仍为「系统设置」）
-
+## 告警记录
 --------------------告警记录--------------------------
 数据模型对应
 字段	                    页面用途
@@ -228,7 +228,7 @@ frontend/src/views/AlarmCenter.vue（由空白页改为完整功能页）
 快捷操作：「处理」将状态改为 resolved；编辑、删除
 交互：顶部 Toast 提示、刷新、分页跳转（与设备管理页相同模式）
 样式：dash-card、深色表单、级别/状态标签色（与总览页告警配色一致）
-
+## 天气预报
 --------------------天气预报（数据总览）--------------------------
 功能说明
   * 入口：数据总览页（Overview）右上角天气条，点击打开弹窗
@@ -284,3 +284,25 @@ localCityId 更新
               │    父组件更新天气条   │
               └─────────────────────┘
 --------------
+
+## 缓存设计方案
+---------------redis数据类型和缓存键设计--------------------------
+缓存键设计               对应的表
+agri:latest:env         EnvMonitorRecord     hash
+agri:latest:soil        SoilMonitorRecord    hash
+agri:latest:sensor      SensorData           hash
+agri:latest:alarms      AlarmRecord          list
+
+agri:history:env        EnvMonitorRecord      list
+agri:history:soil       SoilMonitorRecord     list
+
+agri:summary            多表聚合               string
+
+
+
+
+
+
+
+
+
