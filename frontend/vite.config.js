@@ -6,4 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    chunkSizeWarningLimit: 2000 // 将阈值改为 2000KB
+  }
 });
