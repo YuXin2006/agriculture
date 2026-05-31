@@ -10,19 +10,22 @@ class RedisClient:
     _instance = None
     
     def __new__(cls):
-        """单例模式"""
+        """单例模式，使用连接池支持高并发"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._client = redis.Redis(
+            # 使用连接池，支持高并发场景
+            pool = redis.ConnectionPool(
                 host=getattr(settings, 'REDIS_HOST', 'localhost'),
                 port=getattr(settings, 'REDIS_PORT', 6379),
                 db=getattr(settings, 'REDIS_DB', 0),
                 password=getattr(settings, 'REDIS_PASSWORD', ''),
                 decode_responses=True,
+                max_connections=50,  # 关键：增加连接池大小，支持高并发
                 socket_timeout=5,
                 socket_connect_timeout=5,
                 retry_on_timeout=True
             )
+            cls._instance._client = redis.Redis(connection_pool=pool)
             cls._instance._test_connection()
         return cls._instance
     

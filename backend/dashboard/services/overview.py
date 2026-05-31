@@ -6,6 +6,8 @@ from dashboard.models import AlarmRecord, DeviceNode, EnvMonitorRecord, SensorDa
 from dashboard.services.data_analysis import build_analysis_payload
 from dashboard.utils import paginate_queryset
 from dashboard.services.mqtt_cache import get_latest_env, get_latest_soil, get_latest_sensor, get_latest_alarms
+from dashboard._utils.redis_client import redis_client
+from dashboard._utils.redis_keys import KEY_SUMMARY, EXPIRE_SUMMARY
 
 SAMPLING_INTERVAL = "5 分钟/次"
 
@@ -354,7 +356,7 @@ def _serialize_devices(page, page_size):
                 "device_type": node.device_type,
                 "region": node.region,
                 "status": node.status,
-                "updated_at": node.updated_at,
+                "updated_at": _format_dt(node.updated_at),
             }
         )
     total = pagination["total"]
@@ -367,6 +369,14 @@ def _serialize_devices(page, page_size):
 
 
 def build_overview_payload(page=1, page_size=8, region=None):
+    # 构建缓存键（考虑分页和区域参数）
+    cache_key = f"{KEY_SUMMARY}:{page}:{page_size}:{region or 'all'}"
+    
+    # 尝试获取缓存
+    cached = redis_client.get(cache_key)
+    if cached:
+        return cached
+    
     # 1. 获取最新传感器数据（从MQTT缓存）
     env_latest = _latest_env()
     soil_latest = _latest_soil()
@@ -396,7 +406,7 @@ def build_overview_payload(page=1, page_size=8, region=None):
 
     device_results, device_pagination, device_summary = _serialize_devices(page, page_size)
     # 5. 组装最终返回数据
-    return {
+    result = {
         "meta": _build_meta(),
         "metrics": metrics,
         "summary_stats": _build_summary_stats(),
@@ -414,3 +424,8 @@ def build_overview_payload(page=1, page_size=8, region=None):
         "heatmap": analysis["heatmap"],
         "gps_points": analysis["gps_points"],
     }
+    
+    # 设置缓存（5分钟过期）
+    redis_client.set(cache_key, result, expire=EXPIRE_SUMMARY)
+    
+    return result
