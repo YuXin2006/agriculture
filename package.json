@@ -2,6 +2,6 @@
   "name": "agriculture-root",
   "version": "1.0.0",
   "scripts": {
-  "dev": "concurrently \"redis-server\" \"cd backend && python manage.py runserver\" \"cd frontend && npm run dev\""
+  "dev": "concurrently \"redis-server ./redis.windows.conf\" \"cd backend && python manage.py runserver\" \"cd frontend && npm run dev\""
 }
 }

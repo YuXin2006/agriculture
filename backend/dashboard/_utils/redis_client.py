@@ -20,7 +20,7 @@ class RedisClient:
                 db=getattr(settings, 'REDIS_DB', 0),
                 password=getattr(settings, 'REDIS_PASSWORD', ''),
                 decode_responses=True,
-                max_connections=50,  # 关键：增加连接池大小，支持高并发
+                max_connections=200,  # 关键：增加连接池大小，支持高并发
                 socket_timeout=5,
                 socket_connect_timeout=5,
                 retry_on_timeout=True
