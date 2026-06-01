@@ -16,6 +16,24 @@ except ImportError:
 from dashboard._utils.redis_client import redis_client
 from dashboard._utils.redis_keys import *
 
+# WebSocket广播支持
+def broadcast_to_channel(channel_name, message):
+    """向指定频道广播消息"""
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            channel_name,
+            {
+                'type': 'broadcast_message',
+                'message': message
+            }
+        )
+    except Exception as e:
+        logger.debug(f"Broadcast failed (channel may not be ready): {e}")
+
 # 延迟导入模型
 DeviceNode = None
 EnvMonitorRecord = None
@@ -93,6 +111,9 @@ def _update_env(data):
         )
     except Exception as e:
         logger.error(f"Save env error: {e}")
+    
+    # WebSocket广播
+    broadcast_to_channel('sensor_updates', {'type': 'env', 'data': data})
 
 def _update_soil(data):
     """更新土壤数据"""
@@ -115,6 +136,9 @@ def _update_soil(data):
         )
     except Exception as e:
         logger.error(f"Save soil error: {e}")
+    
+    # WebSocket广播
+    broadcast_to_channel('sensor_updates', {'type': 'soil', 'data': data})
 
 def _update_sensor(data):
     """更新传感器数据"""
@@ -179,6 +203,9 @@ def _update_alarms(data):
             )
         except Exception as e:
             logger.error(f"Save alarm error: {e}")
+        
+        # WebSocket广播告警
+        broadcast_to_channel('sensor_updates', {'type': 'alarm', 'data': entry})
     
     _cache["alarms"] = _cache["alarms"][:50]
 

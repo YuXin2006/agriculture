@@ -22,6 +22,7 @@ from .views import (
     SoilMonitorListCreateAPIView,
     SystemStatusAPIView,
 )
+from .views.test import broadcast_test
 
 
 urlpatterns = [
@@ -54,4 +55,6 @@ urlpatterns = [
     path("chat/stream/", ChatStreamAPIView.as_view(), name="chat-stream"),
     path("chat/history/", ChatHistoryAPIView.as_view(), name="chat-history"),
     path("chat/clear/", ChatClearAPIView.as_view(), name="chat-clear"),
+    # 测试websocket广播接口
+    path('test/broadcast/', broadcast_test, name='broadcast-test'),
 ]

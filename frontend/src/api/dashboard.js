@@ -1,4 +1,5 @@
 import http from "./Http";
+import WebSocketClient from "../utils/WebSocketClient";
 
 export const getOverview = (params = {}) => {
   return http.get("/api/overview/", params);
@@ -143,3 +144,5 @@ export const getChatHistory = (params = {}) => {
 export const clearChatSession = (data = {}) => {
   return http.post("/api/chat/clear/", data);
 };
+
+export { WebSocketClient };

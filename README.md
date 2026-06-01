@@ -208,7 +208,6 @@ API 路由（对应 dashboard.js）
       5.快捷入口跳转总览/设备/告警/AI
       6.每 30 秒自动刷新，可手动刷新
   *dashboard.js — 新增 getSystemStatus()
-  *路由页标题改为「运维看板」（侧边栏仍为「系统设置」）
 ## 告警记录
 --------------------告警记录--------------------------
 数据模型对应
@@ -378,11 +377,52 @@ MQTT 客户端需要持续监听消息，是一个典型的后台服务，当 Dj
 
 <span style="color:red;"> 
 
-get_mqtt_runtime_status()
+3. chatbot的缓存预热实现机制
+
+缓存预热在 Django 应用启动时触发，通过 apps.py 的 ready() 方法实现：
+```python
+ threading.Timer(1.0, self._start_warmup).start()
+ ```
+延迟1秒后在后台线程中执行缓存预热,避免在应用初始化期间访问数据库
+
+                                               -->warmup_session_list()     获取最近活跃的会话
+_start_warmup() -->  warmup_chat_cache()       -->warmup_recent_messages()  获取最近活跃的会话消息 (使用 pipeline 批量缓存)
+                                               -->warmup_system_faq()       用string类型的faq_data硬编码
 
 
 
+4. redis_client添加连接池,支持高并发
+   redis缓存优化使得overview接口吞吐量提升5.1倍（66.7 -> 338）
+   并发量提升2.5倍（200 -> 500）
+   loadtime从18ms到1ms
+   
+   
+```python
+ pool = redis.ConnectionPool(
+                host=getattr(settings, 'REDIS_HOST', 'localhost'),
+                port=getattr(settings, 'REDIS_PORT', 6379),
+                db=getattr(settings, 'REDIS_DB', 0),
+                password=getattr(settings, 'REDIS_PASSWORD', ''),
+                decode_responses=True,
+                max_connections=50,  # 关键：增加连接池大小，支持高并发
+                socket_timeout=5,
+                socket_connect_timeout=5,
+                retry_on_timeout=True
+            )
+            cls._instance._client = redis.Redis(connection_pool=pool)
+```            
 
+5. 针对api/overview接口 重写异步fastapi接口/api/async/overview 
+   首先改写redis_client和mqtt_cache, 实现async_redis_client 和 async_mqtt_cache 类
+   
+   异步协程优化overview接口,实现吞吐量提升（3.5倍 338->1220），并发量提升（4.4倍 500->2200）低并发状态下响应时间基本不变
+
+   启动方式：未添加到npm run dev聚合命令,需要单独启动,新加端口并
+   ```bash
+   cd c:\Users\YuXin\Downloads\agriculture\backend
+   uvicorn async_api:app --host 0.0.0.0 --port 8001 --reload
+   ```
+   
 
 
 

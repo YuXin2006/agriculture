@@ -181,6 +181,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import * as echarts from "echarts";
 import { getOverview } from "../api/dashboard";
+import socketClient from "../utils/WebSocketClient";
 import WeatherModal from "../components/WeatherModal.vue";
 
 const loading = ref(false);
@@ -437,9 +438,66 @@ const resizeCharts = () => {
   airChart?.resize();
 };
 
+// WebSocket 数据更新处理
+const handleEnvUpdate = (data) => {
+  console.log('Received env update:', data);
+  updateSensorCard('temperature', data.temperature);
+  updateSensorCard('humidity', data.humidity);
+  updateSensorCard('co2', data.co2);
+  updateSensorCard('light', data.light);
+  if (data.air_quality !== undefined) {
+    updateSensorCard('air_quality', data.air_quality);
+  }
+  meta.value.last_updated = data.recorded_at || new Date().toLocaleString('zh-CN');
+};
+
+const handleSoilUpdate = (data) => {
+  console.log('Received soil update:', data);
+  updateSensorCard('soil_moisture', data.soil_moisture);
+  updateSensorCard('soil_ph', data.soil_ph);
+  updateSensorCard('soil_temperature', data.soil_temperature);
+};
+
+const handleAlarmUpdate = (data) => {
+  console.log('Received alarm:', data);
+  const newAlarm = {
+    id: Date.now(),
+    level: data.level || 'warn',
+    text: data.title || data.message || '未知告警',
+    detail: data.detail || '',
+    time: data.recorded_at ? formatTime(data.recorded_at) : new Date().toLocaleString('zh-CN')
+  };
+  alarms.value.unshift(newAlarm);
+  if (alarms.value.length > 10) {
+    alarms.value.pop();
+  }
+};
+
+const updateSensorCard = (key, value) => {
+  const card = sensorCards.value.find(c => c.key === key);
+  if (card && value !== undefined) {
+    card.display = typeof value === 'number' ? value.toFixed(1) : String(value);
+    card.time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    if (card.trend && Array.isArray(card.trend)) {
+      card.trend.push(parseFloat(value));
+      if (card.trend.length > 12) {
+        card.trend.shift();
+      }
+    }
+  }
+};
+
 onMounted(async () => {
   await loadOverview();
   window.addEventListener("resize", resizeCharts);
+  
+  // 连接 WebSocket
+  socketClient.connect();
+  
+  // 监听 WebSocket 消息
+  socketClient.on('env', handleEnvUpdate);
+  socketClient.on('soil', handleSoilUpdate);
+  socketClient.on('alarm', handleAlarmUpdate);
 });
 
 onUnmounted(() => {
@@ -447,6 +505,11 @@ onUnmounted(() => {
   envChart?.dispose();
   soilChart?.dispose();
   airChart?.dispose();
+  
+  // 清理 WebSocket 监听
+  socketClient.off('env', handleEnvUpdate);
+  socketClient.off('soil', handleSoilUpdate);
+  socketClient.off('alarm', handleAlarmUpdate);
 });
 </script>
 
