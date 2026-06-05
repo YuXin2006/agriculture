@@ -2,6 +2,6 @@
   "name": "agriculture-root",
   "version": "1.0.0",
   "scripts": {
-  "dev": "concurrently \"redis-server ./redis.windows.conf\" \"cd backend && python manage.py runserver\" \"cd frontend && npm run dev\""
+  "dev": "concurrently \"redis-server ./redis.windows.conf\" \"cd backend && daphne -b 0.0.0.0 -p 8000 agri_backend.asgi:application\" \"cd frontend && npm run dev\""
 }
 }
