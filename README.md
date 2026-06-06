@@ -510,3 +510,51 @@ websocketclient类(websocketclient.js) 中的connect 方法会配置好wsUrl
 
     
 
+## nginx 配置
+### 全局配置(配置进程和线程)
+1. 工作进程数 
+2. 错误日志路径
+3. pid文件路径
+4. 进程的最大并发连接数
+
+### http 的其它配置
+1. mime类型是一种类型映射表 告诉服务器css是样式表 js是脚本表 等等 如何解析这些文件
+2. 核心网络优化sendfile、tcp_nopush、tcp_nodelay 等 用于提高网络性能
+3. Gzip 全家桶（让网页秒开）
+
+### http的server配置
+1. nginx监听80端口 服务器名为localhost(部署后会改)
+2. 前端静态资源
+3. 先配置fastapi异步服务
+4. 再配置django反向代理
+5. websocket连接配置
+6. 最后配置错误页面的处理
+为什么fastapi异步服务要先配置？ 
+因为nginx的匹配规则是从上往下 如果一个请求是可以被 /api/async/ 匹配的，就会被 FastAPI 处理。如果先配置django反向代理，那么 /api/async/ 就会被 django 处理，而不是 FastAPI。这里的异步服务就失效了
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+代码我复制到了本地的nginx文件夹的nginx.conf文件中 在我的本地启动 就是创建一个新的端口 cd C:\Users\YuXin\Desktop\nginx 
+先测试一下nginx配置是否有问题
+```bash
+(base) PS C:\Users\YuXin\Desktop\nginx> .\nginx.exe -t
+nginx: the configuration file C:\Users\YuXin\Desktop\nginx/conf/nginx.conf syntax is ok
+nginx: configuration file C:\Users\YuXin\Desktop\nginx/conf/nginx.conf test is successful
+```
+这就没问题了
+**其他命令说明**
+启动命令是 start .\nginx.exe
+修改了前端文件后 需要npm run build 重新打包前端文件才能生效
+如果修改了nginx.conf 文件 直接.\nginx.exe -s reload 无需关闭nginx就可以更新配置
+关闭命令是 .\nginx.exe -s stop
