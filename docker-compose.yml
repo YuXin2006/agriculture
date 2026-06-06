@@ -11,6 +11,11 @@ services:
       MYSQL_DATABASE: agriculture
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
+      interval: 3s
+      timeout: 10s
+      retries: 3
     networks:
       - agri_network
 
@@ -21,6 +26,11 @@ services:
     restart: always
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 3
     networks:
       - agri_network
 
@@ -45,11 +55,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       # 从 .env 文件读取其他配置
-      - MQTT_ENABLED=${MQTT_ENABLED:-false}
-      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST:-iot.skyate.com}
-      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-1883}
-      - MQTT_USERNAME=${MQTT_USERNAME:-}
-      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - MQTT_ENABLED=false  # Web服务不连接MQTT，由独立Worker处理
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_API_BASE=${OPENAI_API_BASE:-}
       - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
@@ -59,7 +65,40 @@ services:
     networks:
       - agri_network
 
-  
+  # ========== MQTT Worker（独立进程） ==========
+  mqtt_worker:
+    build: ./backend
+    container_name: agri_mqtt
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # 数据库配置（必须完整复制）
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=agriculture
+      - DB_USER=root
+      - DB_PASSWORD=123456
+      # Redis配置
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # MQTT配置
+      - MQTT_ENABLED=true
+      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST:-iot.skyate.com}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-1883}
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    command: python mqtt_worker.py
+    volumes:
+      - ./backend:/app
+    networks:
+      - agri_network
+
   # ========== Nginx 反向代理服务 ==========
   nginx:
     image: nginx:alpine

@@ -15,6 +15,9 @@ except ImportError:
 # 导入Redis客户端和缓存键常量
 from dashboard._utils.redis_client import redis_client
 from dashboard._utils.redis_keys import *
+from dashboard.models import DeviceNode, EnvMonitorRecord, SoilMonitorRecord, SensorData, AlarmRecord
+
+logger = logging.getLogger(__name__)
 
 # WebSocket广播支持
 def broadcast_to_channel(channel_name, message):
@@ -34,17 +37,7 @@ def broadcast_to_channel(channel_name, message):
     except Exception as e:
         logger.debug(f"Broadcast failed (channel may not be ready): {e}")
 
-# 延迟导入模型
-DeviceNode = None
-EnvMonitorRecord = None
-SoilMonitorRecord = None
-SensorData = None
-AlarmRecord = None
 
-def _lazy_import_models():
-    """延迟导入数据库模型"""
-    global DeviceNode, EnvMonitorRecord, SoilMonitorRecord, SensorData, AlarmRecord
-    from dashboard.models import DeviceNode, EnvMonitorRecord, SoilMonitorRecord, SensorData, AlarmRecord
 
 logger = logging.getLogger(__name__)
 
@@ -211,8 +204,6 @@ def _update_alarms(data):
 
 def _on_message(client, userdata, msg):
     """处理MQTT消息"""
-    if DeviceNode is None:
-        _lazy_import_models()
     
     payload = _normalize_payload(msg.payload)
     if payload is None:
@@ -237,7 +228,28 @@ def _mqtt_runner():
         return
     
     client = mqtt.Client(client_id=MQTT_CLIENT_ID)
-    client.on_connect = lambda c, u, f, rc: [c.subscribe(t) for t in MQTT_TOPICS] if rc == 0 else logger.warning(f"MQTT connect failed: {rc}")
+    
+    # 连接状态标志，避免重复打印失败日志
+    connected = [False]       # 是否已连接成功
+    failed_logged = [False]   # 是否已经打印过失败日志
+    
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            # 连接成功
+            if not connected[0]:
+                logger.info("MQTT connected successfully")
+                connected[0] = True
+                failed_logged[0] = False  # 重置失败日志标志
+            for topic in MQTT_TOPICS:
+                client.subscribe(topic)
+        else:
+            # 连接失败
+            if not failed_logged[0]:
+                logger.warning(f"MQTT connect failed: {rc}")
+                failed_logged[0] = True  # 标记已打印，避免重复
+            connected[0] = False
+    
+    client.on_connect = on_connect
     client.on_message = _on_message
     
     try:
