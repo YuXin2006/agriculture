@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "channels",
     "dashboard",
+    'django_extensions',
 ]
 
 REST_FRAMEWORK = {
