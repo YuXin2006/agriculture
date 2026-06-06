@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+# ========== MySQL 数据库服务 ==========
+  db:
+    image: mysql:8.0
+    container_name: agri_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: agriculture
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - agri_network
+
+  # ========== Redis 缓存服务 ==========
+  redis:
+    image: redis:7-alpine
+    container_name: agri_redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - agri_network
+
+  # ========== Django 后端服务 ==========
+  web:
+    build: ./backend
+    container_name: agri_web
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy #确保 db 彻底健康才启动后端
+      redis:
+        condition: service_started
+    environment:
+      # 数据库配置（容器内部使用服务名访问）
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=agriculture
+      - DB_USER=root
+      - DB_PASSWORD=123456
+      # Redis 配置
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # 从 .env 文件读取其他配置
+      - MQTT_ENABLED=${MQTT_ENABLED:-false}
+      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST:-iot.skyate.com}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-1883}
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/static
+    networks:
+      - agri_network
+
+  
+  # ========== Nginx 反向代理服务 ==========
+  nginx:
+    image: nginx:alpine
+    container_name: agri_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      # 挂载自定义 nginx.conf
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # 挂载前端静态资源
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      # 挂载 Django 静态文件
+      - static_volume:/app/static
+    depends_on:
+      - web
+    networks:
+      - agri_network
+
+volumes:
+  mysql_data:
+  redis_data:
+  static_volume:
+
+networks:
+  agri_network:
+    driver: bridge
