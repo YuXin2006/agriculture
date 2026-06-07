@@ -71,11 +71,11 @@ ASGI_APPLICATION = "agri_backend.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "agriculture",      # 你的数据库名
-        "USER": "root",       # 你的MySQL用户名
-        "PASSWORD": "12345678",   # 你的MySQL密码
-        "HOST": "localhost",           # MySQL服务器地址
-        "PORT": "3306",                # MySQL端口
+        'NAME': os.environ.get('DB_NAME', 'agriculture'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', '123456'),
+        'HOST': os.environ.get('DB_HOST', 'agri_db'),  # 💡 核心：让它去拿环境变量！
+        'PORT': os.environ.get('DB_PORT', '3306'),            # MySQL端口
         "OPTIONS": {
             "charset": "utf8mb4",
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",

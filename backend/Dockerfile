@@ -1,33 +1,42 @@
-# 1. 使用稳健的 3.12 瘦身版基础镜像
-FROM python:3.12-slim
+# 1. 直接用你本地绝对存在的 nginx:alpine 作为地基，无需任何联网下载！
+FROM nginx:alpine
 
 # 2. 设置工作目录
 WORKDIR /app
 
-# 3. 【优化】环境变量提前，确保从一开始就不产生 .pyc 垃圾，且日志实时刷新
+# 3. 环境变量提前，禁止生成垃圾文件
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# 4. 安装系统依赖（MySQL 客户端及编译工具），干完活立刻清理缓存垃圾
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
+# 4. 核心改动：利用 Alpine 的包管理器 apk 离线编译安装环境
+RUN apk update && apk add --no-cache \
+    python3 \
     python3-dev \
-    default-libmysqlclient-dev \
-    && rm -rf /var/lib/apt/lists/*
+    py3-pip \
+    gcc \
+    musl-dev \
+    mariadb-connector-c-dev \
+    pkgconfig
 
-# 5. 先复制依赖文件并安装（只要 requirements.txt 不变，以后每次构建这里都能秒过）
+# 5. 修复软链接
+RUN ln -sf python3 /usr/bin/python && ln -sf pip3 /usr/bin/pip
+
+# 6. 先复制依赖文件并安装（💡【核心修正】末尾加上了 --break-system-packages 通行证）
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt --break-system-packages
 
+# 7. 强行打满组件补丁（💡【核心修正】末尾同样加上通行证）
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn paho-mqtt gunicorn --break-system-packages
 
-# 6. 复制项目所有代码
+# 8. 复制项目所有代码
 COPY . .
 
-# 7. 创建日志文件夹
+# 9. 创建日志文件夹
 RUN mkdir -p /app/logs
 
-# 8. 声明容器内部监听 8000 端口
+# 10. 声明容器内部监听端口
 EXPOSE 8000
+EXPOSE 8001
 
-# 9. 启动命令
+# 默认启动命令
 CMD ["gunicorn", "--config", "gunicorn.conf.py", "agri_backend.wsgi:application"]
