@@ -271,15 +271,35 @@ def start_mqtt():
 # ==================== 获取数据函数 ====================
 
 def _get_cached(key, cache_key):
-    """通用获取缓存函数"""
-    cached = redis_client.hgetall(key) if key in [KEY_LATEST_ENV, KEY_LATEST_SOIL, KEY_LATEST_SENSOR] else redis_client.lrange(key)
-    return cached if cached else _cache[cache_key]
+    """通用获取缓存函数（支持 String 和 Hash 两种格式）"""
+    # 先尝试从 Redis 获取 String 类型数据（MQTT Worker 写入）
+    string_data = redis_client.get(key)
+    if string_data:
+        return string_data
+    # 再尝试从 Redis 获取 Hash 类型数据（Django 内部写入）
+    hash_data = redis_client.hgetall(key) if key in [KEY_LATEST_ENV, KEY_LATEST_SOIL, KEY_LATEST_SENSOR] else None
+    if hash_data:
+        return hash_data
+    # 最后从内存缓存获取
+    return _cache[cache_key]
 
 def get_latest_env():
-    return _get_cached(KEY_LATEST_ENV, "env") or (EnvMonitorRecord.objects.order_by("-recorded_at").first() if DeviceNode else None)
+    cached = _get_cached(KEY_LATEST_ENV, "env")
+    if cached:
+        return cached
+    try:
+        return EnvMonitorRecord.objects.order_by("-recorded_at").first()
+    except Exception:
+        return None
 
 def get_latest_soil():
-    return _get_cached(KEY_LATEST_SOIL, "soil") or (SoilMonitorRecord.objects.order_by("-recorded_at").first() if DeviceNode else None)
+    cached = _get_cached(KEY_LATEST_SOIL, "soil")
+    if cached:
+        return cached
+    try:
+        return SoilMonitorRecord.objects.order_by("-recorded_at").first()
+    except Exception:
+        return None
 
 def get_latest_sensor():
     return _get_cached(KEY_LATEST_SENSOR, "sensor")

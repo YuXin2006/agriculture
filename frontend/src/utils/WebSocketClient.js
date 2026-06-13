@@ -10,14 +10,13 @@ class WebSocketClient {
   connect() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    let wsUrl = `${protocol}//127.0.0.1:8000/ws/sensor/`;
+    let wsUrl = `${protocol}//${host}/ws/sensor/`;
     
-    // 如果是开发环境且配置了 VITE_BASE_URL
-    /* const baseURL = import.meta.env.VITE_BASE_URL;
+    const baseURL = import.meta.env.VITE_BASE_URL;
     if (baseURL) {
       const baseHost = baseURL.replace('http://', '').replace('https://', '');
       wsUrl = `${protocol}//${baseHost}/ws/sensor/`;
-    } */
+    }
     
     console.log('WebSocket connecting to:', wsUrl);
     

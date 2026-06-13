@@ -70,7 +70,7 @@ export const sendChatMessage = (data) => {
 
 // 流式发送 AI 聊天消息（SSE）
 export const streamChatMessage = (data, callbacks = {}) => {
-  const baseURL = import.meta.env.VITE_BASE_URL || "http://127.0.0.1:8000";
+  const baseURL = import.meta.env.VITE_BASE_URL || "";
   const { onSession, onToken, onDone, onError } = callbacks;
 
   return new Promise((resolve, reject) => {

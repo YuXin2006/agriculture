@@ -64,16 +64,27 @@ class MQTTWorker:
             payload = msg.payload.decode("utf-8")
             data = json.loads(payload) if payload.startswith("{") else {"raw": payload}
             
-            # 存储到 Redis（三种方式）
+            # 获取 topic 后缀作为数据类型
+            topic_suffix = msg.topic.split("/")[-1] if "/" in msg.topic else msg.topic
+            
+            # 存储到 Redis（与 Django 后端一致的键格式）
             # 1. 发布到 Redis 频道（实时推送）
             self.redis_client.publish(f"mqtt:{msg.topic}", json.dumps(data))
-            # 2. 存储最新值（供查询）
-            self.redis_client.set(f"mqtt:latest:{msg.topic}", json.dumps(data))
-            # 3. 追加到历史列表（保留最近100条）
-            self.redis_client.lpush(f"mqtt:history:{msg.topic}", json.dumps(data))
-            self.redis_client.ltrim(f"mqtt:history:{msg.topic}", 0, 99)
+            # 2. 存储最新值（供查询）- 使用 Django 期望的键格式
+            if topic_suffix in ["env", "soil", "sensor"]:
+                self.redis_client.set(f"agri:latest:{topic_suffix}", json.dumps(data), ex=600)
+            elif topic_suffix == "alarm":
+                # 告警使用列表存储
+                self.redis_client.lpush("agri:latest:alarms", json.dumps(data))
+                self.redis_client.ltrim("agri:latest:alarms", 0, 49)
+                self.redis_client.expire("agri:latest:alarms", 3600)
+            # 3. 追加到历史列表
+            if topic_suffix in ["env", "soil"]:
+                self.redis_client.lpush(f"agri:history:{topic_suffix}", json.dumps(data))
+                self.redis_client.ltrim(f"agri:history:{topic_suffix}", 0, 287)
+                self.redis_client.expire(f"agri:history:{topic_suffix}", 86400)
             
-            print(f"📥 Processed: {msg.topic} -> Redis")
+            print(f"📥 Processed: {msg.topic} -> Redis (key: agri:latest:{topic_suffix})")
             
         except Exception as e:
             print(f"❌ Error processing message: {e}")

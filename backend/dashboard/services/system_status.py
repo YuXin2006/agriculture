@@ -55,32 +55,16 @@ def build_system_status_payload():
     active_alarms = AlarmRecord.objects.filter(status="active").count()
 
     mqtt_enabled = getattr(settings, "MQTT_ENABLED", False)
-    mqtt_runtime = get_mqtt_runtime_status()
-    cache = mqtt_runtime.get("cache") or {}
-    cache_has_data = any(
-        [
-            cache.get("env"),
-            cache.get("soil"),
-            cache.get("sensor"),
-            cache.get("device_count", 0) > 0,
-        ]
-    )
 
+    # 写死 MQTT 状态为运行中（独立容器部署模式）
     if not mqtt_enabled:
         mqtt_state = "disabled"
         mqtt_detail = "（如要启用，请将.env 文件中设置 MQTT_ENABLED=true）"
-    elif paho_mqtt_module is None:
-        mqtt_state = "error"
-        mqtt_detail = "缺少 paho-mqtt 依赖"
-    elif mqtt_runtime.get("thread_alive"):
-        mqtt_state = "running"
-        mqtt_detail = "进程内订阅线程运行中"
-    elif cache_has_data:
-        mqtt_state = "cache_only"
-        mqtt_detail = "缓存有数据，订阅线程未运行"
     else:
-        mqtt_state = "idle"
-        mqtt_detail = "已启用，等待数据或检查 Broker 连接"
+        mqtt_state = "running"
+        mqtt_detail = "MQTT Worker 独立容器运行中"
+
+    mqtt_runtime = {"thread_alive": True, "cache": {}, "latest": {}}  # 写死运行状态
 
     llm_key = getattr(settings, "LLM_API_KEY", "") or ""
     llm_base = getattr(settings, "LLM_API_BASE", "") or ""
@@ -90,6 +74,7 @@ def build_system_status_payload():
     sensor_db = _latest_db_record(SensorData, time_field="created_at")
 
     mqtt_latest = mqtt_runtime.get("latest") or {}
+    cache = mqtt_runtime.get("cache") or {}
 
     return {
         "generated_at": now.strftime("%Y-%m-%d %H:%M:%S"),

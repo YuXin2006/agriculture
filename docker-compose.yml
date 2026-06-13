@@ -53,11 +53,6 @@ services:
       # Redis 配置（用于Channel Layer）
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      # 从 .env 文件读取其他配置
-      - MQTT_ENABLED=false  # Web服务不连接MQTT，由独立Worker处理
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - OPENAI_API_BASE=${OPENAI_API_BASE:-}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
     volumes:
       - ./backend:/app
       - static_volume:/app/static

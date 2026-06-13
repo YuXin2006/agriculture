@@ -2,7 +2,7 @@ import axios from 'axios'
 class Http {
     constructor() {
         this.instance = axios.create({
-            baseURL: import.meta.env.VITE_BASE_URL || 'http://127.0.0.1:8000',
+            baseURL: import.meta.env.VITE_BASE_URL || '',
             timeout: 6000
         })
         this.instance.interceptors.request.use(
